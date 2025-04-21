@@ -1,0 +1,94 @@
+-- Anti-AFK
+local vu = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:connect(function()
+    vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    wait(1)
+    vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+end)
+
+-- Anti-ban basic
+pcall(function()
+    if setfflag then
+        setfflag("AbuseReportScreenshot", "False")
+        setfflag("DFFlagAbuseReportScreenshot", "False")
+    end
+end)
+
+-- Auto select team (Pirates)
+repeat wait() until game:IsLoaded()
+if game.PlaceId == 2753915549 then
+    local args = {
+        [1] = "SetTeam",
+        [2] = "Pirates"
+    }
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(args))
+end
+
+-- UI Setup
+local screenGui = Instance.new("ScreenGui", game.CoreGui)
+local label = Instance.new("TextLabel", screenGui)
+label.Size = UDim2.new(0.3, 0, 0.1, 0)
+label.Position = UDim2.new(0.35, 0, 0.05, 0)
+label.BackgroundColor3 = Color3.new(0, 0, 0)
+label.TextColor3 = Color3.new(1, 1, 1)
+label.TextScaled = true
+label.Text = "FIND FRUIT"
+label.Font = Enum.Font.SourceSansBold
+label.ZIndex = 999999
+
+-- Check for fruit in map
+function findFruit()
+    for _,v in pairs(game.Workspace:GetDescendants()) do
+        if v:IsA("Tool") and v.Handle and v.Name ~= "Gun" then
+            return true
+        end
+    end
+    return false
+end
+
+-- Avoid VIP Servers
+function isVIP()
+    return game.PrivateServerId ~= "" and game.PrivateServerOwnerId ~= 0
+end
+
+-- Server hop
+local function hopServer()
+    if isVIP() then
+        warn("Currently in a VIP server, skipping hop.")
+        return
+    end
+
+    label.Text = "HOPPING SERVER..."
+    
+    local HttpService = game:GetService("HttpService")
+    local TeleportService = game:GetService("TeleportService")
+    local PlaceID = game.PlaceId
+    local cursor = ""
+
+    local function getServers()
+        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100&cursor=" .. cursor)
+        return HttpService:JSONDecode(req)
+    end
+
+    local success, result = pcall(getServers)
+    if success then
+        for _, server in pairs(result.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(PlaceID, server.id)
+                wait(2)
+            end
+        end
+    end
+end
+
+-- Main Loop
+while wait(10) do
+    if not findFruit() then
+        label.Text = "FIND FRUIT"
+        hopServer()
+    else
+        label.Text = "FRUIT FOUND!"
+        wait(3)
+        label.Text = "FIND FRUIT"
+    end
+end
